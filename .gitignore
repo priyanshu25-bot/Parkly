@@ -1,4 +1,5 @@
 out/
 *.class
 parkly_data.csv
-parkly_setup.txt
+.vscode/
+.DS_Store

@@ -32,14 +32,14 @@ public class ParkingRecord extends Vehicle {
     }
 
     public static ParkingRecord fromCSV(String line) {
-        String[] parts = line.split(",");
+        String[] parts = line.split(",", -1);
         if (parts.length != 3) {
-            return null;
+            throw new IllegalArgumentException("A parking record must have three fields.");
         }
         return new ParkingRecord(
-            parts[0],
-            Double.parseDouble(parts[1]),
-            Double.parseDouble(parts[2])
+                parts[0],
+                Double.parseDouble(parts[1]),
+                Double.parseDouble(parts[2])
         );
     }
 }
