@@ -1,0 +1,4 @@
+out/
+*.class
+parkly_data.csv
+parkly_setup.txt
