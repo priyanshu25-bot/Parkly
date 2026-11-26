@@ -4,7 +4,7 @@ public abstract class Vehicle {
     protected String vehicleNumber;
 
     public Vehicle(String vehicleNumber) {
-        this.vehicleNumber = vehicleNumber.trim().toUpperCase();
+        this.vehicleNumber = vehicleNumber == null ? "" : vehicleNumber.trim().toUpperCase();
     }
 
     public String getVehicleNumber() {
