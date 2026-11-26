@@ -1,33 +1,34 @@
 package parkly.service;
 
 import parkly.exception.ParklyException;
+import parkly.exception.VehicleNotFoundException;
+import parkly.model.Location;
 import parkly.model.ParkingRecord;
-import parkly.storage.FileStore;
-import parkly.util.GeoUtil;
+import parkly.storage.Repository;
+import parkly.util.DistanceCalculator;
+import parkly.util.GeoValidator;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ParkingService {
     private final HashMap<String, ParkingRecord> records;
-    private final FileStore store;
+    private final Repository<String, ParkingRecord> repository;
 
-    public ParkingService() throws ParklyException {
-        this.store = new FileStore("parkly_data.csv");
-        this.records = new HashMap<>(store.load());
+    public ParkingService(Repository<String, ParkingRecord> repository) throws ParklyException {
+        this.repository = Objects.requireNonNull(repository, "Repository cannot be null.");
+        this.records = new HashMap<>(repository.loadAll());
     }
 
     public void saveCar(String vehicleNumber, double latitude, double longitude) throws ParklyException {
-        if (vehicleNumber == null || vehicleNumber.trim().isEmpty()) {
-            throw new ParklyException("Vehicle number cannot be empty.");
-        }
-        GeoUtil.validate(latitude, longitude);
-        ParkingRecord record = new ParkingRecord(vehicleNumber, latitude, longitude);
-        String key = record.getVehicleNumber();
+        String key = GeoValidator.validateVehicleNumber(vehicleNumber);
+        GeoValidator.validateCoordinates(latitude, longitude);
+        ParkingRecord record = new ParkingRecord(key, new Location(latitude, longitude));
         ParkingRecord previous = records.put(key, record);
         try {
-            store.save(records.values());
+            repository.saveAll(records.values());
         } catch (ParklyException e) {
             if (previous == null) {
                 records.remove(key);
@@ -39,21 +40,22 @@ public class ParkingService {
     }
 
     public ParkingRecord findCar(String vehicleNumber) throws ParklyException {
-        ParkingRecord record = records.get(vehicleNumber.trim().toUpperCase());
+        String key = GeoValidator.validateVehicleNumber(vehicleNumber);
+        ParkingRecord record = records.get(key);
         if (record == null) {
-            throw new ParklyException("Vehicle not found.");
+            throw new VehicleNotFoundException("Vehicle not found.");
         }
         return record;
     }
 
     public void deleteCar(String vehicleNumber) throws ParklyException {
-        String key = vehicleNumber.trim().toUpperCase();
+        String key = GeoValidator.validateVehicleNumber(vehicleNumber);
         ParkingRecord removed = records.remove(key);
         if (removed == null) {
-            throw new ParklyException("Vehicle not found.");
+            throw new VehicleNotFoundException("Vehicle not found.");
         }
         try {
-            store.save(records.values());
+            repository.saveAll(records.values());
         } catch (ParklyException e) {
             records.put(key, removed);
             throw e;
@@ -67,7 +69,10 @@ public class ParkingService {
     }
 
     public double getDistanceMeters(ParkingRecord car, double latitude, double longitude) throws ParklyException {
-        GeoUtil.validate(latitude, longitude);
-        return GeoUtil.distanceMeters(latitude, longitude, car.getLat(), car.getLon());
+        if (car == null) {
+            throw new VehicleNotFoundException("Vehicle not found.");
+        }
+        GeoValidator.validateCoordinates(latitude, longitude);
+        return DistanceCalculator.haversineMeters(new Location(latitude, longitude), car.getLocation());
     }
 }
