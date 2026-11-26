@@ -12,18 +12,20 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
-public class FileStore {
+public class FileStore implements Repository<String, ParkingRecord> {
     private final String filePath;
 
     public FileStore(String filePath) {
-        this.filePath = filePath;
+        this.filePath = Objects.requireNonNull(filePath, "File path cannot be null.");
     }
 
-    public synchronized void save(Collection<ParkingRecord> records) throws ParklyException {
+    @Override
+    public synchronized void saveAll(Collection<ParkingRecord> items) throws ParklyException {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePath))) {
-            for (ParkingRecord r : records) {
-                bw.write(r.toCSV());
+            for (ParkingRecord record : items) {
+                bw.write(record.toCSV());
                 bw.newLine();
             }
         } catch (IOException e) {
@@ -31,7 +33,8 @@ public class FileStore {
         }
     }
 
-    public Map<String, ParkingRecord> load() throws ParklyException {
+    @Override
+    public synchronized Map<String, ParkingRecord> loadAll() throws ParklyException {
         Map<String, ParkingRecord> map = new HashMap<>();
         File file = new File(filePath);
         if (!file.exists()) {
